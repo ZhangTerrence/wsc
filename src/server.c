@@ -1,3 +1,4 @@
+#include "route.h"
 #include "server.h"
 
 #include <errno.h>
@@ -53,6 +54,8 @@ struct Server create_server(char *ip_address, char *port, int max_connections) {
     server.port = atoi(port);
     server.max_connections = max_connections;
     server.socket = server_socket;
+
+    server.routes = NULL;
 
     freeaddrinfo(res);
 
