@@ -5,7 +5,7 @@
 
 struct Route {
     char* route;
-    void (*function)(void);
+    void (*function)(struct Request request);
 
     struct Route *left;
     struct Route *right;

@@ -1,3 +1,4 @@
+#include "http.h"
 #include "route.h"
 #include "server.h"
 
@@ -8,9 +9,11 @@
 #include <string.h>
 #include <unistd.h>
 
+#define DEBUG 1
+
 struct Server create_server(char *ip_address, char *port, int max_connections) {
     int server_socket, reuse_addr = REUSE_ADDR;
-    struct addrinfo hints, *res, *rp;
+    struct addrinfo hints, *res, *p;
     struct Server server;
 
     memset(&hints, 0, sizeof(hints));
@@ -25,9 +28,9 @@ struct Server create_server(char *ip_address, char *port, int max_connections) {
     }
 
     server_socket = -1;
-    for (rp = res; rp != NULL; rp = res->ai_next) {
+    for (p = res; p != NULL; p = res->ai_next) {
         // Sets up server socket.
-        server_socket = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+        server_socket = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
         if (server_socket < 0) {
             continue;
         }
@@ -35,26 +38,25 @@ struct Server create_server(char *ip_address, char *port, int max_connections) {
         setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &reuse_addr, sizeof(int));
 
         // Binds server socket to port.
-        if (bind(server_socket, rp->ai_addr, rp->ai_addrlen) < 0) {
+        if (bind(server_socket, p->ai_addr, p->ai_addrlen) < 0) {
             continue;
         }
 
         break;
     }
 
-    if (rp == NULL) {
+    if (p == NULL) {
         perror("Unable to connect and bind server socket...");
         exit(EXIT_FAILURE);
     }
 
-    server.domain = rp->ai_family;
-    server.type = rp->ai_socktype;
-    server.protocol = rp->ai_protocol;
+    server.socket = server_socket;
+    server.domain = p->ai_family;
+    server.type = p->ai_socktype;
+    server.protocol = p->ai_protocol;
     server.ip_address = ip_address;
     server.port = atoi(port);
     server.max_connections = max_connections;
-    server.socket = server_socket;
-
     server.routes = NULL;
 
     freeaddrinfo(res);
@@ -66,4 +68,47 @@ struct Server create_server(char *ip_address, char *port, int max_connections) {
     }
 
     return server;
+}
+
+void run_server(struct Server server) {
+    socklen_t address_size;
+    struct sockaddr_storage client_address;
+
+    for (;;) {
+        int pid, client_socket;
+        address_size = sizeof(&client_address);
+
+        if ((client_socket = accept(server.socket, (struct sockaddr*)&client_address, &address_size)) < 0) {
+            perror("Unable to accept incoming connection...");
+            exit(EXIT_FAILURE);
+        }
+
+        // One child process per client connection.
+        if ((pid = fork()) < 0) {
+            perror("Unable to create child process...");
+            exit(EXIT_FAILURE);
+        }
+
+        if (pid != 0) {
+            // Parent
+            close(client_socket);
+            continue;
+        }
+
+        // Child
+        close(server.socket);
+
+        struct Request *request = malloc(sizeof(struct Request));
+        handle_request(client_socket, request);
+#if DEBUG
+        printf("Method: %d\nRoute: %s\nVersion: %s\n", request->method, request->uri, request->http_version);
+        printf("Body: %s\n", request->body);
+#endif
+
+        free(request->uri);
+        free(request->http_version);
+        free(request->body);
+        free(request);
+        exit(EXIT_SUCCESS);
+    }
 }

@@ -18,7 +18,7 @@ struct Route *get_route(struct Route *root, char *route) {
     }
 }
 
-struct Route *add_route(struct Route *root, char *route, void (*function)(void)) {
+struct Route *add_route(struct Route *root, char *route, void (*function)(struct Request request)) {
     if (root == NULL) {
         struct Route *new_route = malloc(sizeof(struct Route));
         new_route->route = route;
