@@ -5,8 +5,6 @@
 #include <string.h>
 #include <sys/socket.h>
 
-#define DEBUG 0
-
 void parse_request_line(struct Request *request, char *request_line) {
     const char SP[] = " ";
     char *method = strtok(request_line, SP), *uri = strtok(NULL, SP), *http_version = strtok(NULL, SP);
@@ -80,20 +78,6 @@ void handle_request(int client_socket, struct Request *request) {
         perror("Unable to read bytes from request...");
         exit(EXIT_FAILURE);
     }
-
-#if DEBUG
-    buffer[rec_bytes] = 0;
-    for (int i = 0; i < 512; i++) {
-        const char LF = '\n', CR = '\r';
-        if (buffer[i] == CR) {
-            buffer[i] = 'r';
-        }
-        if (buffer[i] == LF) {
-            buffer[i] = 'n';
-        }
-    }
-    puts(buffer);
-#endif
 
     parse_request(request, buffer);
 }

@@ -9,8 +9,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#define DEBUG 1
-
 struct Server create_server(char *ip_address, char *port, int max_connections) {
     int server_socket, reuse_addr = REUSE_ADDR;
     struct addrinfo hints, *res, *p;
@@ -98,13 +96,24 @@ void run_server(struct Server server) {
         // Child
         close(server.socket);
 
+        // Creates a new request struct and adds info to it.
         struct Request *request = malloc(sizeof(struct Request));
         handle_request(client_socket, request);
-#if DEBUG
-        printf("Method: %d\nRoute: %s\nVersion: %s\n", request->method, request->uri, request->http_version);
-        printf("Body: %s\n", request->body);
-#endif
 
+        // Runs the specific function associated with the given route if it exists.
+        struct Route *route = get_route(server.routes, request->uri);
+        if (route == NULL) {
+            fprintf(stderr, "Unable to find route...\n");
+            remove_routes(server.routes);
+            free(request->uri);
+            free(request->http_version);
+            free(request->body);
+            free(request);
+            exit(EXIT_FAILURE);
+        }
+        route->function(request);
+
+        remove_routes(server.routes);
         free(request->uri);
         free(request->http_version);
         free(request->body);

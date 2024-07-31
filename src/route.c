@@ -1,5 +1,6 @@
 #include "route.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -18,10 +19,11 @@ struct Route *get_route(struct Route *root, char *route) {
     }
 }
 
-struct Route *add_route(struct Route *root, char *route, void (*function)(struct Request request)) {
+struct Route *add_route(struct Route *root, char *route, void (*function)(struct Request *request)) {
     if (root == NULL) {
         struct Route *new_route = malloc(sizeof(struct Route));
-        new_route->route = route;
+        new_route->route = malloc(strlen(route) + 1);
+        strcpy(new_route->route, route);
         new_route->function = function;
         new_route->left = NULL;
         new_route->right = NULL;
@@ -29,59 +31,29 @@ struct Route *add_route(struct Route *root, char *route, void (*function)(struct
     }
 
     int key = strcmp(root->route, route);
+    printf("%s %s\n", root->route, route);
     if (key == 0) {
-        return NULL;
+        fprintf(stderr, "Duplicate route...\n");
+        exit(EXIT_FAILURE);
     } else if (key < 0) {
-        return add_route(root->left, route, function);
+        root->left = add_route(root->left, route, function);
     } else {
-        return add_route(root->right, route, function);
-    }
-}
-
-struct Route *remove_route(struct Route *root, char *route) {
-    if (root == NULL) {
-        return NULL;
-    }
-
-    int key = strcmp(root->route, route);
-    if (key == 0) {
-        if (root->left == NULL) {
-            struct Route *tmp = root->right;
-            free(root);
-            root = NULL;
-            return tmp;
-        } else if (root->right == NULL) {
-            struct Route *tmp = root->left;
-            free(root);
-            root = NULL;
-            return tmp;
-        } else {
-            struct Route *successor = root->right;
-            while (successor->left != NULL) {
-                successor = successor->left;
-            }
-
-            root->route = successor->route;
-            root->function = successor->function;
-            root->right = remove_route(root->right, successor->route);
-        }
-    } else if (key < 0) {
-        root->left = remove_route(root->left, route);
-    } else {
-        root->right = remove_route(root->right, route);
+        root->right = add_route(root->right, route, function);
     }
 
     return root;
 }
 
-void remove_all_routes(struct Route *root) {
+void remove_routes(struct Route *root) {
     if (root == NULL) {
         return;
     }
 
-    remove_all_routes(root->left);
-    remove_all_routes(root->right);
+    remove_routes(root->left);
+    remove_routes(root->right);
 
+    free(root->route);
+    root->route = NULL;
     free(root);
     root = NULL;
 }

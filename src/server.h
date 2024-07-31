@@ -1,7 +1,6 @@
 #ifndef SERVER_H
 #define SERVER_H
 
-#include "http.h"
 #include "route.h"
 
 #define REUSE_ADDR 1
