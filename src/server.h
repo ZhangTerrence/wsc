@@ -7,7 +7,7 @@
 
 struct Server {
     // Server socket information.
-    int socket;
+    int server_socket;
     int domain;
     int type;
     int protocol;

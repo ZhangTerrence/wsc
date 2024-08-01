@@ -7,13 +7,22 @@ enum RequestMethod {
     POST
 };
 
-struct Request {
-    // Request Line
+struct RequestLine {
     enum RequestMethod method;
     char *uri;
     char *http_version;
+};
 
-    // Request Body
+struct RequestHeader {
+
+};
+
+struct Request {
+    int client_socket;
+
+    struct RequestLine *request_line;
+    struct RequestHeader *request_header;
+
     char *body;
 };
 

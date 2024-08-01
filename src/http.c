@@ -26,21 +26,21 @@ void parse_request_line(struct Request *request, char *request_line) {
     }
 
     if (strcmp(method, "GET") == 0) {
-        request->method = GET;
+        request->request_line->method = GET;
     } else if (strcmp(method, "HEAD") == 0) {
-        request->method = HEAD;
+        request->request_line->method = HEAD;
     } else if (strcmp(method, "POST") == 0) {
-        request->method = POST;
+        request->request_line->method = POST;
     } else {
         fprintf(stderr, "Unrecognized method from request...\n");
         free(request);
         exit(EXIT_FAILURE);
     }
 
-    request->uri = malloc(strlen(uri) + 1);
-    strcpy(request->uri, uri);
-    request->http_version = malloc(strlen(http_version) + 1);
-    strcpy(request->http_version , http_version);
+    request->request_line->uri = malloc(strlen(uri) + 1);
+    strcpy(request->request_line->uri, uri);
+    request->request_line->http_version = malloc(strlen(http_version) + 1);
+    strcpy(request->request_line->http_version , http_version);
 }
 
 void parse_request(struct Request *request, char *request_string) {
@@ -70,10 +70,10 @@ void parse_request(struct Request *request, char *request_string) {
 }
 
 void handle_request(int client_socket, struct Request *request) {
-    int rec_bytes, sent_bytes;
+    int rec_bytes;
     char buffer[4096] = {0};
 
-    rec_bytes = recv(client_socket, buffer, 512, 0);
+    rec_bytes = recv(client_socket, buffer, 4096, 0);
     if (rec_bytes <= 0) {
         perror("Unable to read bytes from request...");
         exit(EXIT_FAILURE);

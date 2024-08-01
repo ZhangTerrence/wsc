@@ -9,7 +9,7 @@
 void response(struct Request *request) {
     int sent_bytes;
 #if DEBUG
-    printf("Method: %d\nRoute: %s\nVersion: %s\n", request->method, request->uri, request->http_version);
+    printf("Method: %d\nRoute: %s\nVersion: %s\n", request->request_line->method, request->request_line->uri, request->request_line->http_version);
     printf("Body: %s\n", request->body);
 #endif
 
