@@ -25,7 +25,9 @@ int main() {
 #if DEBUG
       printf("Socket: %d\nIP Address: %s\nPort: %d\n", server.server_socket, server.ip_address, server.port);
 #endif
-    server.routes = add_route(server.routes, "/api", response);
-    run_server(server);
+    server.routes = add_route(server.routes, "GET", "/api", response);
+    if (server.routes != NULL) {
+        run_server(server);
+    }
     remove_routes(server.routes);
 }

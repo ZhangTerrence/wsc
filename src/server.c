@@ -73,10 +73,10 @@ void run_server(struct Server server) {
     struct sockaddr_storage client_address;
 
     for (;;) {
-        int pid, client_socket;
+        int pid, client_socket, exit_status = 0;
         address_size = sizeof(&client_address);
 
-        if ((client_socket = accept(server.server_socket, (struct sockaddr*)&client_address, &address_size)) < 0) {
+        if ((client_socket = accept(server.server_socket, (struct sockaddr *) &client_address, &address_size)) < 0) {
             perror("Unable to accept incoming connection...");
             exit(EXIT_FAILURE);
         }
@@ -102,9 +102,21 @@ void run_server(struct Server server) {
         handle_request(client_socket, request);
 
         // Runs the specific function associated with the given route if it exists.
-        struct Route *route = get_route(server.routes, request->request_line->uri);
+        char *method = get_method_string(request->request_line->method), *uri = request->request_line->uri;
+        if (method == NULL) {
+            fprintf(stderr, "Unrecognized method...\n");
+            exit_status = 1;
+            goto free;
+        }
+        struct Route *route = get_route(server.routes, method, uri);
         if (route == NULL) {
             fprintf(stderr, "Unable to find route...\n");
+            exit_status = 1;
+            goto free;
+        }
+        route->function(request);
+
+        free: {
             remove_routes(server.routes);
             free(request->request_line->uri);
             free(request->request_line->http_version);
@@ -112,17 +124,15 @@ void run_server(struct Server server) {
             free(request->body);
             free(request);
             close(client_socket);
+            if (exit_status != 0) {
+                goto exit_failure;
+            }
+        }
+        exit_success: {
+            exit(EXIT_SUCCESS);
+        }
+        exit_failure: {
             exit(EXIT_FAILURE);
         }
-        route->function(request);
-
-        remove_routes(server.routes);
-        free(request->request_line->uri);
-        free(request->request_line->http_version);
-        free(request->request_line);
-        free(request->body);
-        free(request);
-        close(client_socket);
-        exit(EXIT_SUCCESS);
     }
 }

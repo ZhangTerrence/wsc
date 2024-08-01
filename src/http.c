@@ -5,6 +5,19 @@
 #include <string.h>
 #include <sys/socket.h>
 
+char *get_method_string(enum RequestMethod method) {
+    switch (method) {
+        case 0:
+            return "GET";
+        case 1:
+            return "HEAD";
+        case 2:
+            return "POST";
+        default:
+            return NULL;
+    }
+}
+
 void parse_request_line(struct Request *request, char *request_line) {
     const char SP[] = " ";
     char *method = strtok(request_line, SP), *uri = strtok(NULL, SP), *http_version = strtok(NULL, SP);

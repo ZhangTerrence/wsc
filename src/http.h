@@ -14,7 +14,6 @@ struct RequestLine {
 };
 
 struct RequestHeader {
-
 };
 
 struct Request {
@@ -25,6 +24,8 @@ struct Request {
 
     char *body;
 };
+
+char *get_method_string(enum RequestMethod method);
 
 void parse_request_line(struct Request *request, char *request_line);
 
