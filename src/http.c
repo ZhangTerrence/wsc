@@ -8,6 +8,7 @@
 void parse_request_line(struct Request *request, char *request_line) {
     const char SP[] = " ";
     char *method = strtok(request_line, SP), *uri = strtok(NULL, SP), *http_version = strtok(NULL, SP);
+    request->request_line = malloc(sizeof(struct RequestLine));
 
     if (method == NULL) {
         fprintf(stderr, "Missing method from request...\n");

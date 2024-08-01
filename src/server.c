@@ -108,8 +108,10 @@ void run_server(struct Server server) {
             remove_routes(server.routes);
             free(request->request_line->uri);
             free(request->request_line->http_version);
+            free(request->request_line);
             free(request->body);
             free(request);
+            close(client_socket);
             exit(EXIT_FAILURE);
         }
         route->function(request);
@@ -117,6 +119,7 @@ void run_server(struct Server server) {
         remove_routes(server.routes);
         free(request->request_line->uri);
         free(request->request_line->http_version);
+        free(request->request_line);
         free(request->body);
         free(request);
         close(client_socket);

@@ -8,4 +8,4 @@ execute_mem: compile
 	@valgrind ./example
 
 clean:
-	@rm ./example
+	@rm ./example vgcore.*
