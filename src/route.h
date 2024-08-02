@@ -7,7 +7,7 @@ struct Route {
     char *method;
     char *uri;
 
-    void (*function)(struct Request *request);
+    void (*function)(struct Request *request, struct Response *response);
 
     struct Route *left;
     struct Route *right;
@@ -15,8 +15,8 @@ struct Route {
 
 struct Route *get_route(struct Route *root, char *method, char *uri);
 
-struct Route *add_route(struct Route *root, char *method, char *uri, void (*function)(struct Request *request));
+struct Route *add_route(struct Route *root, char *method, char *uri, void (*function)(struct Request *request, struct Response *response));
 
-void remove_routes(struct Route *root);
+void free_routes(struct Route *root);
 
 #endif

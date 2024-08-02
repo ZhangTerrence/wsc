@@ -1,6 +1,8 @@
 #ifndef HTTP_H
 #define HTTP_H
 
+#define HTTP_VERSION "HTTP/1.0"
+
 enum RequestMethod {
     GET,
     HEAD,
@@ -25,12 +27,22 @@ struct Request {
     char *body;
 };
 
+struct Response {
+    int client_socket;
+};
+
 char *get_method_string(enum RequestMethod method);
 
-void parse_request_line(struct Request *request, char *request_line);
+int parse_request_line(struct Request *request, char *request_line);
 
-void parse_request(struct Request *request, char *request_string);
+int parse_request(struct Request *request, char *request_string);
 
-void handle_request(int client_socket, struct Request *request);
+int handle_request(int client_socket, struct Request *request);
+
+void free_request(struct Request *request);
+
+struct Response *create_response(int client_socket);
+
+int send_response(struct Response *response, int status_code, char *body);
 
 #endif

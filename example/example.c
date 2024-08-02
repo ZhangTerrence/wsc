@@ -1,33 +1,62 @@
 #include "../src/server.h"
+#include "../src/http.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include <sys/socket.h>
 
 #define DEBUG 1
 
-void response(struct Request *request) {
-    int sent_bytes;
-#if DEBUG
-    printf("Method: %d\nRoute: %s\nVersion: %s\n", request->request_line->method, request->request_line->uri, request->request_line->http_version);
-    printf("Body: %s\n", request->body);
-#endif
-
-    const char response[] = "HTTP/1.0 200 OK\r\n\n<html><body><h1>Hello, world.</h1><p>A simple GET request.</p></body></html>";
-    sent_bytes = send(request->client_socket, response, strlen(response), 0);
-    if (sent_bytes < 0) {
-        perror("Unable to send response...");
+void getPageOne(struct Request *request, struct Response *response) {
+    FILE *fp = fopen("./static/pageOne.html", "r");
+    if (fp == NULL) {
+        return;
     }
+
+    fseek(fp, 0, SEEK_END);
+    long int file_size = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    char *body = malloc(file_size + 1);
+    memset(body, 0, file_size + 1);
+    fread(body, file_size, 1, fp);
+
+    send_response(response, 200, body);
+
+    free(body);
+    fclose(fp);
+}
+
+void getPageTwo(struct Request *request, struct Response *response) {
+    FILE *fp = fopen("./static/pageTwo.html", "r");
+    if (fp == NULL) {
+        return;
+    }
+
+    fseek(fp, 0, SEEK_END);
+    long int file_size = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    char *body = malloc(file_size + 1);
+    memset(body, 0, file_size + 1);
+    fread(body, file_size, 1, fp);
+
+    send_response(response, 200, body);
+
+    free(body);
+    fclose(fp);
 }
 
 int main() {
-    struct Server server = create_server("127.0.0.1", "8080", 3);
+    struct Server *server = create_server("127.0.0.1", "8080", 3);
 #if DEBUG
-      printf("Socket: %d\nIP Address: %s\nPort: %d\n", server.server_socket, server.ip_address, server.port);
+    printf("Server Socket: %d\nIP Address: %s\nPort: %d\n", server->server_socket, server->ip_address, server->port);
 #endif
-    server.routes = add_route(server.routes, "GET", "/api", response);
-    if (server.routes != NULL) {
+    server->routes = add_route(server->routes, get_method_string(GET), "/api/a", getPageOne);
+    server->routes = add_route(server->routes, get_method_string(GET), "/api/b", getPageTwo);
+    if (server->routes != NULL) {
         run_server(server);
     }
-    remove_routes(server.routes);
+    free_server(server);
+    exit(EXIT_SUCCESS);
 }

@@ -21,8 +21,10 @@ struct Server {
     struct Route *routes;
 };
 
-struct Server create_server(char *ip_address, char *port, int max_connections);
+struct Server *create_server(char *ip_address, char *port, int max_connections);
 
-void run_server(struct Server server);
+void run_server(struct Server *server);
+
+void free_server(struct Server *server);
 
 #endif

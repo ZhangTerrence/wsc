@@ -9,10 +9,12 @@
 #include <string.h>
 #include <unistd.h>
 
-struct Server create_server(char *ip_address, char *port, int max_connections) {
+#define DEBUG 1
+
+struct Server *create_server(char *ip_address, char *port, int max_connections) {
     int server_socket, reuse_addr = REUSE_ADDR;
     struct addrinfo hints, *res, *p;
-    struct Server server;
+    struct Server *server = malloc(sizeof(struct Server));
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_addr = AF_UNSPEC;
@@ -48,14 +50,14 @@ struct Server create_server(char *ip_address, char *port, int max_connections) {
         exit(EXIT_FAILURE);
     }
 
-    server.server_socket = server_socket;
-    server.domain = p->ai_family;
-    server.type = p->ai_socktype;
-    server.protocol = p->ai_protocol;
-    server.ip_address = ip_address;
-    server.port = atoi(port);
-    server.max_connections = max_connections;
-    server.routes = NULL;
+    server->server_socket = server_socket;
+    server->domain = p->ai_family;
+    server->type = p->ai_socktype;
+    server->protocol = p->ai_protocol;
+    server->ip_address = ip_address;
+    server->port = atoi(port);
+    server->max_connections = max_connections;
+    server->routes = NULL;
 
     freeaddrinfo(res);
 
@@ -68,7 +70,7 @@ struct Server create_server(char *ip_address, char *port, int max_connections) {
     return server;
 }
 
-void run_server(struct Server server) {
+void run_server(struct Server *server) {
     socklen_t address_size;
     struct sockaddr_storage client_address;
 
@@ -76,7 +78,7 @@ void run_server(struct Server server) {
         int pid, client_socket, exit_status = 0;
         address_size = sizeof(&client_address);
 
-        if ((client_socket = accept(server.server_socket, (struct sockaddr *) &client_address, &address_size)) < 0) {
+        if ((client_socket = accept(server->server_socket, (struct sockaddr *) &client_address, &address_size)) < 0) {
             perror("Unable to accept incoming connection...");
             exit(EXIT_FAILURE);
         }
@@ -94,45 +96,70 @@ void run_server(struct Server server) {
         }
 
         // Child
-        close(server.server_socket);
+        close(server->server_socket);
 
         // Creates a new request struct and adds info to it.
         struct Request *request = malloc(sizeof(struct Request));
         request->client_socket = client_socket;
-        handle_request(client_socket, request);
+        request->request_line = malloc(sizeof(struct RequestLine));
+        if (handle_request(client_socket, request) < 0) {
+            exit_status = 1;
+            goto free_server;;
+        }
+
+        // Creates a new response struct.
+        struct Response *response = create_response(client_socket);
 
         // Runs the specific function associated with the given route if it exists.
         char *method = get_method_string(request->request_line->method), *uri = request->request_line->uri;
         if (method == NULL) {
             fprintf(stderr, "Unrecognized method...\n");
             exit_status = 1;
-            goto free;
+            goto free_request;
         }
-        struct Route *route = get_route(server.routes, method, uri);
+        struct Route *route = get_route(server->routes, method, uri);
         if (route == NULL) {
             fprintf(stderr, "Unable to find route...\n");
             exit_status = 1;
-            goto free;
+            goto free_request;
         }
-        route->function(request);
+        route->function(request, response);
 
-        free: {
-            remove_routes(server.routes);
-            free(request->request_line->uri);
-            free(request->request_line->http_version);
-            free(request->request_line);
-            free(request->body);
-            free(request);
+#ifdef DEBUG
+        printf(
+            "====================================\nClient Socket: %d\nRequest Method: %s\nRequest URI: %s\n====================================\n",
+            client_socket,
+            get_method_string(request->request_line->method),
+            request->request_line->uri);
+#endif
+
+    free_request: {
+            free_request(request);
+        }
+    free_response: {
+            free(response);
+        }
+    free_server: {
+            free_server(server);
             close(client_socket);
             if (exit_status != 0) {
                 goto exit_failure;
             }
         }
-        exit_success: {
+    exit_success: {
             exit(EXIT_SUCCESS);
         }
-        exit_failure: {
+    exit_failure: {
             exit(EXIT_FAILURE);
         }
     }
+}
+
+void free_server(struct Server *server) {
+    if (server->routes != NULL) {
+        free_routes(server->routes);
+        server->routes = NULL;
+    }
+    free(server);
+    server = NULL;
 }

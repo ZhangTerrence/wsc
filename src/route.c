@@ -1,3 +1,4 @@
+#include "server.h"
 #include "route.h"
 
 #include <stdio.h>
@@ -19,7 +20,10 @@ struct Route *get_route(struct Route *root, char *method, char *uri) {
     }
 }
 
-struct Route *add_route(struct Route *root, char *method, char *uri, void (*function)(struct Request *request)) {
+struct Route *add_route(struct Route *root, char *method, char *uri, void (*function)(struct Request *request, struct Response *response)) {
+    if (method == NULL || uri == NULL || function == NULL) {
+        return NULL;
+    }
     if (root == NULL) {
         struct Route *new_route = malloc(sizeof(struct Route));
         new_route->method = malloc(strlen(method) + 1);
@@ -45,18 +49,22 @@ struct Route *add_route(struct Route *root, char *method, char *uri, void (*func
     return root;
 }
 
-void remove_routes(struct Route *root) {
+void free_routes(struct Route *root) {
     if (root == NULL) {
         return;
     }
 
-    remove_routes(root->left);
-    remove_routes(root->right);
+    free_routes(root->left);
+    free_routes(root->right);
 
-    free(root->method);
-    root->method = NULL;
-    free(root->uri);
-    root->uri = NULL;
+    if (root->method != NULL) {
+        free(root->method);
+        root->method = NULL;
+    }
+    if (root->uri != NULL) {
+        free(root->uri);
+        root->uri = NULL;
+    }
     free(root);
     root = NULL;
 }
