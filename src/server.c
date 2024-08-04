@@ -1,6 +1,6 @@
-#include "http.h"
-#include "route.h"
 #include "server.h"
+#include "route.h"
+#include "http.h"
 
 #include <errno.h>
 #include <netdb.h>
@@ -16,6 +16,13 @@ struct Server *create_server(char *ip_address, char *port, int max_connections) 
     struct addrinfo hints, *res, *p;
     struct Server *server = malloc(sizeof(struct Server));
 
+    if (server == NULL) {
+        fprintf(stderr, "Failed to allocate memory for server...\n");
+        free(server);
+        server = NULL;
+        exit(EXIT_FAILURE);
+    }
+
     memset(&hints, 0, sizeof(hints));
     hints.ai_addr = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
@@ -23,7 +30,9 @@ struct Server *create_server(char *ip_address, char *port, int max_connections) 
 
     // Gets address info.
     if (getaddrinfo(ip_address, port, &hints, &res) != 0) {
-        perror("Unable to get address info...");
+        fprintf(stderr, "Failed to get address information..\n.");
+        free(server);
+        server = NULL;
         exit(EXIT_FAILURE);
     }
 
@@ -46,7 +55,9 @@ struct Server *create_server(char *ip_address, char *port, int max_connections) 
     }
 
     if (p == NULL) {
-        perror("Unable to connect and bind server socket...");
+        fprintf(stderr, "Failed to connect and bind server socket...\n");
+        freeaddrinfo(res), free(server);
+        res = NULL, server = NULL;
         exit(EXIT_FAILURE);
     }
 
@@ -63,7 +74,9 @@ struct Server *create_server(char *ip_address, char *port, int max_connections) 
 
     // Configures server socket to listen for connections.
     if (listen(server_socket, max_connections) < 0) {
-        perror("Unable to start listening for connections...");
+        fprintf(stderr, "Failed to prepare listening for connections...\n");
+        free(server);
+        server = NULL;
         exit(EXIT_FAILURE);
     }
 
@@ -75,18 +88,19 @@ void run_server(struct Server *server) {
     struct sockaddr_storage client_address;
 
     for (;;) {
-        int pid, client_socket, exit_status = 0;
+        int pid, client_socket;
         address_size = sizeof(&client_address);
 
         if ((client_socket = accept(server->server_socket, (struct sockaddr *) &client_address, &address_size)) < 0) {
-            perror("Unable to accept incoming connection...");
-            exit(EXIT_FAILURE);
+            fprintf(stderr, "Failed to accept incoming connection...\n");
+            continue;
         }
 
         // One child process per client connection.
         if ((pid = fork()) < 0) {
-            perror("Unable to create child process...");
-            exit(EXIT_FAILURE);
+            fprintf(stderr, "Failed to create child process for connection...\n");
+            close(client_socket);
+            continue;
         }
 
         if (pid != 0) {
@@ -100,11 +114,24 @@ void run_server(struct Server *server) {
 
         // Creates a new request struct and adds info to it.
         struct Request *request = malloc(sizeof(struct Request));
-        request->client_socket = client_socket;
+        if (request == NULL) {
+            fprintf(stderr, "Failed to allocate memory for request...\n");
+            free_server(server);
+            close(client_socket);
+            exit(EXIT_FAILURE);
+        }
         request->request_line = malloc(sizeof(struct RequestLine));
+        if (request->request_line == NULL) {
+            fprintf(stderr, "Failed to allocate memory for request line...\n");
+            free_server(server);
+            close(client_socket);
+            exit(EXIT_FAILURE);
+        }
+        request->client_socket = client_socket;
         if (handle_request(client_socket, request) < 0) {
-            exit_status = 1;
-            goto free_server;;
+            free_server(server);
+            close(client_socket);
+            exit(EXIT_FAILURE);
         }
 
         // Creates a new response struct.
@@ -113,15 +140,19 @@ void run_server(struct Server *server) {
         // Runs the specific function associated with the given route if it exists.
         char *method = get_method_string(request->request_line->method), *uri = request->request_line->uri;
         if (method == NULL) {
-            fprintf(stderr, "Unrecognized method...\n");
-            exit_status = 1;
-            goto free_request;
+            fprintf(stderr, "Unrecognized method '%s'...\n", method);
+            free_request(request), free_response(response);
+            free_server(server);
+            close(client_socket);
+            exit(EXIT_FAILURE);
         }
         struct Route *route = get_route(server->routes, method, uri);
         if (route == NULL) {
-            fprintf(stderr, "Unable to find route...\n");
-            exit_status = 1;
-            goto free_request;
+            fprintf(stderr, "Unrecognized route '%s' '%s'...\n", method, uri);
+            free_request(request), free_response(response);
+            free_server(server);
+            close(client_socket);
+            exit(EXIT_FAILURE);
         }
         route->function(request, response);
 
@@ -133,33 +164,16 @@ void run_server(struct Server *server) {
             request->request_line->uri);
 #endif
 
-    free_request: {
-            free_request(request);
-        }
-    free_response: {
-            free(response);
-        }
-    free_server: {
-            free_server(server);
-            close(client_socket);
-            if (exit_status != 0) {
-                goto exit_failure;
-            }
-        }
-    exit_success: {
-            exit(EXIT_SUCCESS);
-        }
-    exit_failure: {
-            exit(EXIT_FAILURE);
-        }
+        free_request(request), free_response(response);
+        free_server(server);
+        close(client_socket);
+        exit(EXIT_SUCCESS);
     }
 }
 
 void free_server(struct Server *server) {
     if (server->routes != NULL) {
         free_routes(server->routes);
-        server->routes = NULL;
     }
-    free(server);
-    server = NULL;
+    free(server), server = NULL;
 }

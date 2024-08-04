@@ -1,5 +1,5 @@
 compile:
-	@gcc example.c ../src/server.c ../src/route.c ../src/http.c -o example
+	@gcc example.c ../src/server.c ../src/route.c ../src/http.c ../src/parser.c -o example
 
 execute: compile
 	@./example

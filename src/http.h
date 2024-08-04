@@ -3,6 +3,8 @@
 
 #define HTTP_VERSION "HTTP/1.0"
 
+#define INTERNAL_SERVER_ERROR "HTTP/1.0 500 Internal Server Error"
+
 enum RequestMethod {
     GET,
     HEAD,
@@ -33,16 +35,14 @@ struct Response {
 
 char *get_method_string(enum RequestMethod method);
 
-int parse_request_line(struct Request *request, char *request_line);
-
-int parse_request(struct Request *request, char *request_string);
-
 int handle_request(int client_socket, struct Request *request);
-
-void free_request(struct Request *request);
 
 struct Response *create_response(int client_socket);
 
 int send_response(struct Response *response, int status_code, char *body);
+
+void free_request(struct Request *request);
+
+void free_response(struct Response *response);
 
 #endif
