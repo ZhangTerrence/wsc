@@ -8,57 +8,11 @@
 #define DEBUG 1
 
 void get_page_one(struct Request *request, struct Response *response) {
-    FILE *fp = fopen("./static/pageOne.html", "r");
-    if (fp == NULL) {
-        fprintf(stderr, "Unable to read file...\n");
-        return;
-    }
-
-    fseek(fp, 0, SEEK_END);
-    long int file_size = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
-
-    char *body = malloc(file_size + 1);
-    if (body == NULL) {
-        fprintf(stderr, "Unable to allocate memory for body...\n");
-        fclose(fp);
-    }
-    memset(body, 0, file_size + 1);
-    fread(body, file_size, 1, fp);
-
-    if (send_response(response, 200, body) < 0) {
-        fprintf(stderr, "An error has occurred...\n");
-    }
-
-    free(body);
-    fclose(fp);
+    serve_file(request, response, "./static/pageOne.html");
 }
 
 void get_page_two(struct Request *request, struct Response *response) {
-    FILE *fp = fopen("./static/pageTwo.html", "r");
-    if (fp == NULL) {
-        fprintf(stderr, "Unable to read file...\n");
-        return;
-    }
-
-    fseek(fp, 0, SEEK_END);
-    long int file_size = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
-
-    char *body = malloc(file_size + 1);
-    if (body == NULL) {
-        fprintf(stderr, "Unable to allocate memory for body...\n");
-        fclose(fp);
-    }
-    memset(body, 0, file_size + 1);
-    fread(body, file_size, 1, fp);
-
-    if (send_response(response, 200, body) < 0) {
-        fprintf(stderr, "An error has occurred...\n");
-    }
-
-    free(body);
-    fclose(fp);
+    serve_file(request, response, "./static/pageTwo.html");
 }
 
 int main() {

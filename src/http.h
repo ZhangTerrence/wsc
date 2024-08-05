@@ -39,6 +39,8 @@ int handle_request(int client_socket, struct Request *request);
 
 struct Response *create_response(int client_socket);
 
+void serve_file(struct Request *request, struct Response *response, char *path);
+
 int send_response(struct Response *response, int status_code, char *body);
 
 void free_request(struct Request *request);

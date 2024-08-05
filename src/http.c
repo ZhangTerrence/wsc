@@ -54,6 +54,33 @@ struct Response *create_response(int client_socket) {
     return response;
 }
 
+void serve_file(struct Request *request, struct Response *response, char *path) {
+    FILE *fp = fopen(path, "r");
+    if (fp == NULL) {
+        fprintf(stderr, "Failed to read file...\n");
+        return;
+    }
+
+    fseek(fp, 0, SEEK_END);
+    long int file_size = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    char *body = malloc(file_size + 1);
+    if (body == NULL) {
+        fprintf(stderr, "Failed to allocate memory for body...\n");
+        fclose(fp);
+    }
+    memset(body, 0, file_size + 1);
+    fread(body, file_size, 1, fp);
+
+    if (send_response(response, 200, body) < 0) {
+        fprintf(stderr, "Failed to send response...\n");
+    }
+
+    free(body);
+    fclose(fp);
+}
+
 int send_response(struct Response *response, int status_code, char *body) {
     if (get_reason_phrase_string(status_code) == NULL) {
         fprintf(stderr, "Unrecognized status code '%d'...\n", status_code);

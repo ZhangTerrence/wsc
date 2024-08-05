@@ -51,7 +51,6 @@ struct Route *add_route(struct Route *root, char *method, char *uri, void (*func
     }
 
     int key_i = strcmp(root->method, method), key_j = strcmp(root->uri, uri);
-    printf("%s %s %s %s %d %d\n", method, uri, root->method, root->uri, key_i, key_j);
     if (key_i == 0 && key_j == 0) {
         fprintf(stderr, "Duplicate route '%s' '%s'...\n", method, uri);
         free_routes(root);
